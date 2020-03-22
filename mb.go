@@ -126,8 +126,6 @@ func getBasePath(useCur bool) (string, error) {
     day := fmt.Sprintf("%02d", t.Day())
     pathName := path.Join(ok, ".mubu", year, month, day)
 
-    fmt.Printf("In getBasePath, pathName is: %s\n", pathName)
-
     return pathName, nil
 }
 
@@ -147,9 +145,7 @@ func getLatest(path string) (int, error) {
     // sort the names, and return the latest one
     res := -1
     for _, file := range(files) {
-        fmt.Printf("in loop, file: %s\n", file.Name())
-        if matched, err := regexp.MatchString("^[0-9]+$", file.Name()); err == nil {
-            fmt.Printf("here matched? %v\n", matched)
+        if _, err := regexp.MatchString("^[0-9]+$", file.Name()); err == nil {
             // the *one* time that strconv.Atoi isn't a problem
             // because I actually want to compare on arch-non-specific
             // integers
@@ -157,15 +153,14 @@ func getLatest(path string) (int, error) {
             if err == nil && cur > res {
                 res = cur
             }
-        } else {
-            fmt.Printf("regexp returned error? %v", err)
         }
-
     }
-    fmt.Printf("In getLatest, res is: %d\n", res)
     return res + 1, nil
 }
 
+// there's no real reason why this can't be used
+// for any type of addition; we just need to tell
+// it what we're using it for...
 func addNote(args []string, useCur bool) bool {
     var msg string
 
@@ -186,23 +181,22 @@ func addNote(args []string, useCur bool) bool {
     if len(args) > 0 {
         msg = fmt.Sprintf("- %s\n", strings.Join(args, " "))
     } else {
+        // I meant to add this note to the initial commit
+        // but we really should use a scanner here...
         buf := make([]byte, 8192)
         fmt.Printf("- ")
         _, err := os.Stdin.Read(buf)
         if err != nil {
             return false
         }
-        msg = string(buf)
+        msg = fmt.Sprintf("- %s\n", string(buf))
     }
-    fmt.Printf("here? 192\n")
 
     fd, err := os.Create(latest)
     if err != nil {
-        fmt.Printf("error: %v\n", err)
         return false
     }
 
-    fmt.Printf("Here? 198\n")
     ret, err := fd.WriteString(msg)
     if err != nil || ret != len(msg) {
         return false
@@ -210,6 +204,13 @@ func addNote(args []string, useCur bool) bool {
 
     fd.Sync()
     fd.Close()
+
+    // need to append the addition to the
+    // day's index
+    // alternatively, we don't use a single
+    // index file (which is probably better)
+    // and just read out of each of the little
+    // files we create...
 
     return true
 }
